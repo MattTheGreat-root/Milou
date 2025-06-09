@@ -14,6 +14,7 @@ public class Main {
             choice = sc.nextLine();
             switch (choice.toUpperCase()) {
                 case "L":{
+                    userService.signIn();
                     break;
                 }
                 case "S":{

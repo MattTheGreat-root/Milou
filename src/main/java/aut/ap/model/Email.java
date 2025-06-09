@@ -16,15 +16,15 @@ public class Email {
     private User sender;
     private String subject;
     @Basic(optional = false)
+    @Column(columnDefinition = "text")
     private String body;
     private LocalDateTime sentAt;
     @Basic(optional = false)
     private String emailCode;
 
     public Email() {}
-    public Email(Integer id, User sender_id, String subject, String body, LocalDateTime sentAt) {
-        this.id = id;
-        this.sender = sender_id;
+    public Email(User sender, String subject, String body, LocalDateTime sentAt) {
+        this.sender = sender;
         this.subject = subject;
         this.body = body;
         this.sentAt = sentAt;
@@ -74,5 +74,10 @@ public class Email {
             code.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
         }
         return code.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "+ " + sender.getEmail() + " - " + subject + " - " + emailCode;
     }
 }

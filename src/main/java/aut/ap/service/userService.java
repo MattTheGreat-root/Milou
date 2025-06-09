@@ -1,8 +1,10 @@
 package aut.ap.service;
 
 import aut.ap.framework.SingletonSessionFactory;
+import aut.ap.model.Email;
 import aut.ap.model.User;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -53,11 +55,13 @@ public class userService {
         if (user != null && user.getPassword().equals(password)) {
             System.out.println("Welcome back, " + user.getName());
             System.out.println();
-            unreadEmails();
+            showUnreadEmails(user);
+            showLoginPage(user);
         } else {
             throw new RuntimeException("Invalid email or password");
         }
     }
+
 
 
     public static User findByEmail(String email) {
@@ -69,5 +73,68 @@ public class userService {
                 );
     }
 
-    public static void unreadEmails() {}
+    public static void showLoginPage(User user) {
+        System.out.println("[S]end, [V]iew, [R]eply, [F]orward: ");
+        Scanner scanner = new Scanner(System.in);
+        String choice = scanner.nextLine();
+        switch (choice.toUpperCase()){
+            case "S" -> {
+                System.out.println("Recipients (separated by ','): ");
+                String recipients = scanner.nextLine();
+                String[] allRecipients = recipients.split(",");
+
+                List<User> recipientUsers = new ArrayList<>();
+                for (String recipientEmail : allRecipients) {
+                    User recipientUser = findByEmail(recipientEmail.trim());
+                    if (recipientUser != null) {
+                        recipientUsers.add(recipientUser);
+                    } else {
+                        System.out.println("User with email '" + recipientEmail + "' not found. Skipping.");
+                    }
+                }
+
+                System.out.println("Subject: ");
+                String subject = scanner.nextLine();
+                System.out.println("Body: ");
+                String body = scanner.nextLine();
+
+                EmailService.sendEmail(user, recipientUsers, subject, body);
+            }
+            case "V" -> {
+                
+                break;
+            }
+            case "R" -> {
+                break;
+            }
+            case "F" -> {
+                break;
+            }
+            default -> {
+                System.out.println("Invalid choice");
+                break;
+            }
+        }
+
+
+    }
+
+    public static void showUnreadEmails(User user) {
+        List<Email> list = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createNativeQuery("""
+                        SELECT e.* 
+                        FROM emails e
+                        JOIN recipients r ON e.id = r.email_id
+                        WHERE r.recipient_user_id = :userId AND r.is_read = false
+                        """, Email.class)
+                                .setParameter("userId", user.getId())
+                                .getResultList());
+
+        System.out.println("Unread emails: ");
+        for (Email email : list) {
+            System.out.println(email);
+        }
+    }
+
 }
