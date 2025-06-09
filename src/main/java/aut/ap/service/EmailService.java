@@ -19,6 +19,106 @@ public class EmailService {
                 Recipient recipient = new Recipient(email, recipientUser);
                 session.persist(recipient);
             }
+            System.out.println("Successfully sent email");
+            System.out.println("Code: " + email.getEmailCode());
         });
     }
+
+    public static void showUnreadEmails(User user) {
+        List<Email> list = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createNativeQuery("""
+                        SELECT e.* 
+                        FROM emails e
+                        JOIN recipients r ON e.id = r.email_id
+                        WHERE r.recipient_user_id = :userId AND r.is_read = false
+                        """, Email.class)
+                                .setParameter("userId", user.getId())
+                                .getResultList());
+
+        System.out.println("Unread emails: ");
+        for (Email email : list) {
+            System.out.println(email);
+        }
+    }
+
+    public static void showAllEmails(User user) {
+        List<Email> emails = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createNativeQuery("""
+                            SELECT e.* 
+                            FROM emails e
+                            JOIN recipients r ON e.id = r.email_id
+                            WHERE r.recipient_user_id = :userId
+                            ORDER BY e.sentAt DESC
+                            """, Email.class)
+                                .setParameter("userId", user.getId())
+                                .getResultList()
+                );
+
+        System.out.println("ALl received  emails: ");
+        for (Email email : emails) {
+            System.out.println(email);
+        }
+    }
+
+    public static void showSentEmails(User user) {
+        List<Email> emails = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createQuery("""
+                            FROM Email e
+                            WHERE e.sender.id = :userId
+                            ORDER BY e.sentAt DESC
+                            """, Email.class)
+                                .setParameter("userId", user.getId())
+                                .getResultList()
+                );
+
+        System.out.println("Sent Emails:");
+        for (Email email : emails) {
+            System.out.println(email);
+        }
+    }
+
+    public static void showEmailByCode(String emailCode, User user) {
+        Email email = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createQuery("""
+                            FROM Email e
+                            WHERE e.emailCode = :code
+                              AND (e.sender.id = :userId OR EXISTS (
+                                  SELECT 1 FROM Recipient r
+                                  WHERE r.email.id = e.id AND r.recipienUser.id = :userId
+                              ))
+                            """, Email.class)
+                                .setParameter("code", emailCode)
+                                .setParameter("userId", user.getId())
+                                .uniqueResult()
+                );
+
+        if (email == null) {
+            System.out.println("You cannot read this email.");
+            return;
+        }
+
+        List<String> recipients = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createQuery("""
+                            SELECT r.recipienUser.email
+                            FROM Recipient r
+                            WHERE r.email.id = :emailId
+                            """, String.class)
+                                .setParameter("emailId", email.getId())
+                                .getResultList()
+                );
+
+        System.out.println("Code: " + email.getEmailCode());
+        System.out.println("Recipient(s): " + String.join(", ", recipients));
+        System.out.println("Subject: " + email.getSubject());
+        System.out.println("Date: " + email.getSentAt().toLocalDate());
+        System.out.println();
+        System.out.println(email.getBody());
+    }
+
+
 }

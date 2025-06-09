@@ -1,9 +1,7 @@
 package aut.ap.service;
 
 import aut.ap.framework.SingletonSessionFactory;
-import aut.ap.model.Email;
 import aut.ap.model.User;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -55,7 +53,7 @@ public class userService {
         if (user != null && user.getPassword().equals(password)) {
             System.out.println("Welcome back, " + user.getName());
             System.out.println();
-            showUnreadEmails(user);
+            EmailService.showUnreadEmails(user);
             showLoginPage(user);
         } else {
             throw new RuntimeException("Invalid email or password");
@@ -101,7 +99,28 @@ public class userService {
                 EmailService.sendEmail(user, recipientUsers, subject, body);
             }
             case "V" -> {
-                
+                System.out.println("[A]ll emails, [U]nread emails, [S]ent emails, Read by [C]ode: ");
+                String view  = scanner.nextLine();
+                switch (view.toUpperCase()){
+                    case "A" -> {
+                        EmailService.showAllEmails(user);
+                        break;
+                    }
+                    case "U" -> {
+                        EmailService.showUnreadEmails(user);
+                        break;
+                    }
+                    case "S" -> {
+                        EmailService.showSentEmails(user);
+                        break;
+                    }
+                    case "C" -> {
+                        System.out.println("Enter the code: ");
+                        String code = scanner.nextLine();
+                        EmailService.showEmailByCode(code, user);
+                    }
+
+                }
                 break;
             }
             case "R" -> {
@@ -119,22 +138,5 @@ public class userService {
 
     }
 
-    public static void showUnreadEmails(User user) {
-        List<Email> list = SingletonSessionFactory.get()
-                .fromTransaction(session ->
-                        session.createNativeQuery("""
-                        SELECT e.* 
-                        FROM emails e
-                        JOIN recipients r ON e.id = r.email_id
-                        WHERE r.recipient_user_id = :userId AND r.is_read = false
-                        """, Email.class)
-                                .setParameter("userId", user.getId())
-                                .getResultList());
-
-        System.out.println("Unread emails: ");
-        for (Email email : list) {
-            System.out.println(email);
-        }
-    }
 
 }
