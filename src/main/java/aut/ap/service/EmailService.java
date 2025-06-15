@@ -120,5 +120,74 @@ public class EmailService {
         System.out.println(email.getBody());
     }
 
+    public static Email findEmailByCode(String emailCode, User user) {
+        Email email = SingletonSessionFactory.get()
+                .fromTransaction(session ->
+                        session.createQuery("""
+                        FROM Email e
+                        WHERE e.emailCode = :code
+                          AND (e.sender.id = :userId OR EXISTS (
+                              SELECT 1 FROM Recipient r
+                              WHERE r.email.id = e.id AND r.recipienUser.id = :userId
+                          ))
+                        """, Email.class)
+                                .setParameter("code", emailCode)
+                                .setParameter("userId", user.getId())
+                                .uniqueResult()
+                );
+        if (email == null){
+            System.err.println("Email not found.");
+        }
+        return email;
+    }
+
+    public static void replyToEmail(User sender, String originalEmailCode, String replyBody) {
+        Email originalEmail = findEmailByCode(originalEmailCode, sender);
+        if (originalEmail == null) {
+            System.out.println("Email not found or you don’t have access to it.");
+            return;
+        }
+
+        String replySubject = "[Re] " + originalEmail.getSubject();
+        Email replyEmail = new Email(sender, replySubject, replyBody, LocalDateTime.now());
+
+        SingletonSessionFactory.get().inTransaction(session -> {
+            session.persist(replyEmail);
+
+            Recipient recipient = new Recipient(replyEmail, originalEmail.getSender());
+            session.persist(recipient);
+        });
+
+        System.out.println("Successfully sent your reply to email: " + originalEmailCode);
+        System.out.println("Reply Code: " + replyEmail.getEmailCode());
+    }
+
+    public static void forwardEmail(User sender, String originalEmailCode, List<User> recipients) {
+        Email originalEmail = findEmailByCode(originalEmailCode, sender);
+        if (originalEmail == null) {
+            System.out.println("Email not found or you don’t have access to it.");
+            return;
+        }
+
+        String forwardSubject = "[Fwd] " + originalEmail.getSubject();
+        String forwardBody = originalEmail.getBody();
+
+        Email forwardEmail = new Email(sender, forwardSubject, forwardBody, LocalDateTime.now());
+
+        SingletonSessionFactory.get().inTransaction(session -> {
+            session.persist(forwardEmail);
+
+            for (User recipient : recipients) {
+                Recipient recipientObj = new Recipient(forwardEmail, recipient);
+                session.persist(recipientObj);
+            }
+        });
+
+        System.out.println("Email forwarded successfully.");
+        System.out.println("Email Code: " + forwardEmail.getEmailCode());
+    }
+
+
+
 
 }
