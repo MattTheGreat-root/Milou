@@ -1,6 +1,7 @@
 package aut.ap.service;
 
 import aut.ap.framework.SingletonSessionFactory;
+import aut.ap.model.Email;
 import aut.ap.model.User;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,9 +125,31 @@ public class userService {
                 break;
             }
             case "R" -> {
+                System.out.println("Code: ");
+                String code = scanner.nextLine();
+                System.out.println("Body: ");
+                String body = scanner.nextLine();
+
+                EmailService.replyToEmail(user, code, body);
                 break;
             }
             case "F" -> {
+                System.out.println("Code: ");
+                String code = scanner.nextLine();
+                System.out.println("Recipients (separated by ','): ");
+                String recipients = scanner.nextLine();
+                String[] allRecipients = recipients.split(",");
+
+                List<User> recipientUsers = new ArrayList<>();
+                for (String recipientEmail : allRecipients) {
+                    User recipientUser = findByEmail(recipientEmail.trim());
+                    if (recipientUser != null) {
+                        recipientUsers.add(recipientUser);
+                    } else {
+                        System.out.println("User with email '" + recipientEmail + "' not found. Skipping.");
+                    }
+                }
+                EmailService.forwardEmail(user, code, recipientUsers);
                 break;
             }
             default -> {
