@@ -1,38 +1,35 @@
-   Email Service CLI
-A command-line Java application for sending, receiving, and managing emails between registered users. This project demonstrates the use of Hibernate (JPA) with a MySQL database for object-relational mapping.
+# Email Management System
 
-   Features
+A simple console-based email application built with Java, Hibernate (JPA), and MySQL.  
+Users can sign up, log in, send emails to other users, and view received or sent emails.
 
-User registration & login
-Compose and send emails to one or multiple users
-View unread emails
-View all received emails
-View sent emails
-Mark emails as read when opened
-Secure, randomized email codes for referencing emails
-Lazy loading handling using JOIN FETCH
-Transaction management via Hibernate
+## Features
 
-   Technologies Used
-   
-Java 17+
-Hibernate ORM
-MySQL
-Jakarta Persistence (JPA)
-SecureRandom for email codes
-Console-based UI (CLI)
+- User registration and login
+- Compose and send emails to multiple recipients
+- View **unread**, **all received**, and **sent** emails
+- Mark emails as read when opened
 
-   Project Structure
-   
-aut.ap
-├── model       # JPA Entity classes (User, Email, Recipient)
-├── service     # Business logic (userService, EmailService)
-├── Main.java   # Entry point of the application
-└── resources   # Hibernate configuration files (hibernate.cfg.xml)
+## Technologies Used
 
-  To Use:
-  
-1.Install all the dependencies specified in pom.xml
-2.Create a MySQL database and Run the schema SQL to create required tables(as provided).
-3.Specify YOUR_DB_NAME, YOUR_USERNAME and YOUR_PASSWORD in the hibernate.cfg.xml.template file, and then remove ".template" from the end of the file. Change the whole database connection url if necessary.
-4.Build and run this program
+- Java 17+
+- Hibernate (JPA)
+- MySQL
+- JDBC
+- Maven (optional)
+
+## Database Schema Overview
+
+- `users`: Stores user accounts.
+- `emails`: Stores email metadata and body.
+- `recipients`: Maps emails to their recipients, with read/unread status.
+
+## Setup Instructions
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/MattTheGreat-root/Milou.git
+2. **DataBase**
+Create a MySQL database and Run the schema SQL to create required tables(as provided).
+Specify YOUR_DB_NAME, YOUR_USERNAME and YOUR_PASSWORD in the hibernate.cfg.xml.template file, and then remove ".template" from the end of the file. Change the whole database connection url if necessary.
+4. Build and run the program
