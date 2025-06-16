@@ -28,7 +28,7 @@ public class Email {
         this.subject = subject;
         this.body = body;
         this.sentAt = sentAt;
-        setEmailCode(getEmailCode());
+        this.emailCode = generateEmailCode();
     }
 
     public Integer getId() {

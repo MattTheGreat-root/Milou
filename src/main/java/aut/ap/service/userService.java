@@ -1,7 +1,6 @@
 package aut.ap.service;
 
 import aut.ap.framework.SingletonSessionFactory;
-import aut.ap.model.Email;
 import aut.ap.model.User;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,14 +14,6 @@ public class userService {
                     session.persist(user);
                 });
     }
-
-    public static List<User> getAll() {
-        return SingletonSessionFactory.get()
-                .fromTransaction(session ->
-                        session.createNativeQuery("select * from users", User.class)
-                                .getResultList());
-    }
-
 
     public static void signUp() {
         Scanner scanner = new Scanner(System.in);
@@ -88,7 +79,7 @@ public class userService {
                     if (recipientUser != null) {
                         recipientUsers.add(recipientUser);
                     } else {
-                        System.out.println("User with email '" + recipientEmail + "' not found. Skipping.");
+                        throw new RuntimeException("User with email '" + recipientEmail + "' not found.");
                     }
                 }
 
@@ -98,6 +89,8 @@ public class userService {
                 String body = scanner.nextLine();
 
                 EmailService.sendEmail(user, recipientUsers, subject, body);
+                showLoginPage(user);
+                break;
             }
             case "V" -> {
                 System.out.println("[A]ll emails, [U]nread emails, [S]ent emails, Read by [C]ode: ");
@@ -122,6 +115,7 @@ public class userService {
                     }
 
                 }
+                showLoginPage(user);
                 break;
             }
             case "R" -> {
@@ -131,6 +125,7 @@ public class userService {
                 String body = scanner.nextLine();
 
                 EmailService.replyToEmail(user, code, body);
+                showLoginPage(user);
                 break;
             }
             case "F" -> {
@@ -146,14 +141,16 @@ public class userService {
                     if (recipientUser != null) {
                         recipientUsers.add(recipientUser);
                     } else {
-                        System.out.println("User with email '" + recipientEmail + "' not found. Skipping.");
+                        throw new RuntimeException("User with email '" + recipientEmail + "' not found.");
                     }
                 }
                 EmailService.forwardEmail(user, code, recipientUsers);
+                showLoginPage(user);
                 break;
             }
             default -> {
                 System.out.println("Invalid choice");
+                showLoginPage(user);
                 break;
             }
         }

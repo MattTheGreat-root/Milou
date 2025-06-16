@@ -25,57 +25,57 @@ public class EmailService {
     }
 
     public static void showUnreadEmails(User user) {
-        List<Email> list = SingletonSessionFactory.get()
+        List<Email> unreadEmails = SingletonSessionFactory.get()
                 .fromTransaction(session ->
-                        session.createNativeQuery("""
-                        SELECT e.* 
-                        FROM emails e
-                        JOIN recipients r ON e.id = r.email_id
-                        WHERE r.recipient_user_id = :userId AND r.is_read = false
-                        """, Email.class)
+                        session.createQuery("""
+            SELECT e FROM Email e
+            JOIN Recipient r ON r.email = e
+            JOIN FETCH e.sender
+            WHERE r.recipienUser.id = :userId AND r.isRead = false
+            """, Email.class)
                                 .setParameter("userId", user.getId())
-                                .getResultList());
-
+                                .getResultList()
+                );
         System.out.println("Unread emails: ");
-        for (Email email : list) {
+        for (Email email : unreadEmails) {
             System.out.println(email);
         }
     }
 
     public static void showAllEmails(User user) {
-        List<Email> emails = SingletonSessionFactory.get()
-                .fromTransaction(session ->
-                        session.createNativeQuery("""
-                            SELECT e.* 
-                            FROM emails e
-                            JOIN recipients r ON e.id = r.email_id
-                            WHERE r.recipient_user_id = :userId
-                            ORDER BY e.sentAt DESC
-                            """, Email.class)
-                                .setParameter("userId", user.getId())
-                                .getResultList()
-                );
+        List<Recipient> recipients = SingletonSessionFactory.get()
+                .fromTransaction(session -> session.createQuery(
+                                """
+                                SELECT r FROM Recipient r
+                                JOIN FETCH r.email e
+                                JOIN FETCH e.sender
+                                WHERE r.recipienUser.id = :userId
+                                """, Recipient.class)
+                        .setParameter("userId", user.getId())
+                        .getResultList());
 
-        System.out.println("ALl received  emails: ");
-        for (Email email : emails) {
+        System.out.println("All received emails:");
+        for (Recipient recipient : recipients) {
+            Email email = recipient.getEmail();
             System.out.println(email);
         }
     }
 
+
     public static void showSentEmails(User user) {
-        List<Email> emails = SingletonSessionFactory.get()
+        List<Email> sentEmails = SingletonSessionFactory.get()
                 .fromTransaction(session ->
                         session.createQuery("""
-                            FROM Email e
-                            WHERE e.sender.id = :userId
-                            ORDER BY e.sentAt DESC
-                            """, Email.class)
+                        SELECT e FROM Email e
+                        JOIN FETCH e.sender
+                        WHERE e.sender.id = :userId
+                        """, Email.class)
                                 .setParameter("userId", user.getId())
                                 .getResultList()
                 );
 
-        System.out.println("Sent Emails:");
-        for (Email email : emails) {
+        System.out.println("Sent emails:");
+        for (Email email : sentEmails) {
             System.out.println(email);
         }
     }
@@ -84,30 +84,29 @@ public class EmailService {
         Email email = SingletonSessionFactory.get()
                 .fromTransaction(session ->
                         session.createQuery("""
-                            FROM Email e
-                            WHERE e.emailCode = :code
-                              AND (e.sender.id = :userId OR EXISTS (
-                                  SELECT 1 FROM Recipient r
-                                  WHERE r.email.id = e.id AND r.recipienUser.id = :userId
-                              ))
-                            """, Email.class)
+                        FROM Email e
+                        WHERE e.emailCode = :code
+                          AND (e.sender.id = :userId OR EXISTS (
+                              SELECT 1 FROM Recipient r
+                              WHERE r.email.id = e.id AND r.recipienUser.id = :userId
+                          ))
+                        """, Email.class)
                                 .setParameter("code", emailCode)
                                 .setParameter("userId", user.getId())
                                 .uniqueResult()
                 );
 
         if (email == null) {
-            System.out.println("You cannot read this email.");
-            return;
+            throw new RuntimeException("Email with code '" + emailCode + "' not found.");
         }
 
         List<String> recipients = SingletonSessionFactory.get()
                 .fromTransaction(session ->
                         session.createQuery("""
-                            SELECT r.recipienUser.email
-                            FROM Recipient r
-                            WHERE r.email.id = :emailId
-                            """, String.class)
+                        SELECT r.recipienUser.email
+                        FROM Recipient r
+                        WHERE r.email.id = :emailId
+                        """, String.class)
                                 .setParameter("emailId", email.getId())
                                 .getResultList()
                 );
@@ -118,6 +117,21 @@ public class EmailService {
         System.out.println("Date: " + email.getSentAt().toLocalDate());
         System.out.println();
         System.out.println(email.getBody());
+
+        SingletonSessionFactory.get().inTransaction(session -> {
+            Recipient recipient = session.createQuery("""
+            FROM Recipient r
+            WHERE r.email.id = :emailId AND r.recipienUser.id = :userId
+            """, Recipient.class)
+                    .setParameter("emailId", email.getId())
+                    .setParameter("userId", user.getId())
+                    .uniqueResult();
+
+            if (recipient != null && !recipient.isRead()) {
+                recipient.setRead(true);
+                session.persist(recipient);
+            }
+        });
     }
 
     public static Email findEmailByCode(String emailCode, User user) {
@@ -144,8 +158,7 @@ public class EmailService {
     public static void replyToEmail(User sender, String originalEmailCode, String replyBody) {
         Email originalEmail = findEmailByCode(originalEmailCode, sender);
         if (originalEmail == null) {
-            System.out.println("Email not found or you don’t have access to it.");
-            return;
+            throw new RuntimeException("Email not found or you don’t have access to it.");
         }
 
         String replySubject = "[Re] " + originalEmail.getSubject();
@@ -165,8 +178,7 @@ public class EmailService {
     public static void forwardEmail(User sender, String originalEmailCode, List<User> recipients) {
         Email originalEmail = findEmailByCode(originalEmailCode, sender);
         if (originalEmail == null) {
-            System.out.println("Email not found or you don’t have access to it.");
-            return;
+            throw new RuntimeException("Email not found or you don't have access to it.");
         }
 
         String forwardSubject = "[Fwd] " + originalEmail.getSubject();
@@ -186,8 +198,5 @@ public class EmailService {
         System.out.println("Email forwarded successfully.");
         System.out.println("Email Code: " + forwardEmail.getEmailCode());
     }
-
-
-
 
 }
