@@ -15,6 +15,7 @@ public class Recipient {
     @JoinColumn(name = "recipient_user_id")
     private User recipienUser;
     @Basic(optional = false)
+    @Column(name = "is_read")
     private boolean isRead = false;
 
     public Recipient() {}
@@ -38,5 +39,12 @@ public class Recipient {
     public void setEmail(Email email) {
         this.email = email;
     }
+    public boolean isRead() {
+        return isRead;
+    }
+    public void setRead(boolean read) {
+        isRead = read;
+    }
+
 
 }
